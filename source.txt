@@ -1,0 +1,34 @@
+cd ~/projects/legged_ws
+source devel/setup.bash
+export ROBOT_TYPE=go2
+
+roslaunch legged_unitree_description empty_world.launch
+
+roslaunch legged_controllers load_controller.launch cheater:=false
+
+rosrun rqt_controller_manager rqt_controller_manager
+
+
+rosservice call /controller_manager/switch_controller "start_controllers: ['controllers/legged_controller']                   
+stop_controllers: ['']
+strictness: 0
+start_asap: false
+timeout: 0.0"
+
+rostopic pub -1 /cmd_vel geometry_msgs/Twist "linear:
+  x: 0.0
+  y: 0.0
+  z: 0.2
+angular:
+  x: 0.0
+  y: 0.0
+  z: 0.0" 
+  
+rostopic pub -1 /cmd_vel geometry_msgs/Twist "linear:
+  x: 0.1
+  y: 0.0
+  z: 0.0
+angular:
+  x: 0.0
+  y: 0.0
+  z: 0.0" 

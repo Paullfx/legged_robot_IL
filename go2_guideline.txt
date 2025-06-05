@@ -1,0 +1,50 @@
+请按照以下顺序打开terminals并输入
+1. 开terminal1， 
+
+
+source ~/catkin_ws/devel/setup.bash
+export ROBOT_TYPE=go2
+
+运行：
+(in work space catkin_ws)
+Terminal1（run simulation）： roslaunch legged_unitree_description empty_world.launch
+Terminal1 (on board): roslaunch legged_unitree_hw legged_unitree_hw.launch
+
+Terminal2 （load controller）：roslaunch legged_controllers load_controller.launch cheater:=false
+
+Terminal3 （start）： rosservice call /controller_manager/switch_controller "start_controllers: ['controllers/legged_controller']
+stop_controllers: ['']
+strictness: 0
+start_asap: false
+timeout: 0.0" && rostopic pub -1 /cmd_vel geometry_msgs/Twist "linear:
+  x: 0.0
+  y: 0.0
+  z: 0.2
+angular:
+  x: 0.0
+  y: 0.0
+  z: 0.0"
+
+Terminal3 （publish velocity）：  rostopic pub /cmd_vel geometry_msgs/Twist "{linear: {x: 0.1, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}" --once     
+Terminal3 （publish velocity）：  rostopic pub /cmd_vel geometry_msgs/Twist "{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}" --once  
+
+Terminal4 (draw map and trajectory): roslaunch my_marker_pkg display_case0.launch
+
+Terminal5 (give Control Input): python3 go2_test.py
+
+//////////////////////////////////////////////////////////////////////////////////////
+
+
+
+Get lidar data:
+(in go2 computer): export ROS_MASTER_URI=http://192.168.123.222:11311
+source devel/setup.bash
+roslaunch hesai_ros_driver start.launch
+
+(in own conputer): export ROS_MASTER_URI=http://localhost:11311
+export ROS_IP=192.168.123.222
+
+
+(in work space rosworkspace)
+roslaunch hesai_hector_slam hesai_slam.launch
+//////////////////////////////////////////////////////////////////////////////////////
