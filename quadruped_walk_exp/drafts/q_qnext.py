@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import zarr
 
-root_dir = r"C:\data\quadruped_walk"
+root_dir = r"/home/fuxiao/data/quadruped_walk" #  #C:\data\quadruped_walk #/home/fuxiao/data/quadruped_walk
 
 motor_idx = list(range(12))
 q_cols = [f'low_m{i}_q' for i in motor_idx]
@@ -14,18 +14,18 @@ for folder in os.listdir(root_dir):
         continue
     csv_path = os.path.join(folder_path, 'all_topics.csv')
     if not os.path.isfile(csv_path):
-        print(f"[Warning] {csv_path} 不存在，跳过。")
+        print(f"[Warning] {csv_path} doesn't exist, skipping.")
         continue
 
-    # 采样率判断
+    # sampling rate
     if folder.startswith("exp_50hz"):
         sampling_rate = 50
     elif folder.startswith("exp_"):
         sampling_rate = 20
     else:
-        print(f"[Warning] 未知采样率，跳过: {folder}")
+        print(f"[Warning] sampling rate not expected，skipping: {folder}")
         continue
-    stride = int(np.round(sampling_rate / 4))
+    stride = int(np.round(sampling_rate / 5)) # 4 Hz or 5 Hz
 
     print(f"处理 {csv_path}，原采样率: {sampling_rate} Hz，降采样步长: {stride}")
 
@@ -50,9 +50,17 @@ for folder in os.listdir(root_dir):
     if len(q_arr) < 2:
         print(f"[Warning] {csv_path} 降采样后数据太少，跳过。")
         continue
-    agent_pose = q_arr[:-1]
-    action = q_arr[1:]
+    # Define pose and action
+    agent_pose = q_arr[:-1] # (N-1, 12)
+    action = q_arr[1:] # (N-1, 12)
 
+
+
+    for demo_dir in demo_dirs:
+        pose_array = extract_pose_from_csv (demo_dir)
+        action_array = extract_action_from_csv(demo_dir)
+
+        for 
     zarr_path = os.path.join(folder_path, "sa_pairs_q_to_q_4hz.zarr")
     zarr_root = zarr.open(zarr_path, mode='w')
     
