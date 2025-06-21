@@ -1,0 +1,24 @@
+name: realdex_pour #
+
+task_name: quadruped_walk_1
+
+shape_meta: &shape_meta
+  # acceptable types: rgb, low_dim
+  obs:
+    agent_pos:
+      shape: [12] #[]
+      type: low_dimx #
+  action:
+    shape: [12]
+
+env_runner: null
+
+dataset:
+  _target_: diffusion_policy_3d.dataset.realdex_dataset.RealDexDataset
+  zarr_path: /home/yxt/thesis/yirui/imitation/3D-Diffusion-Policy/3D-Diffusion-Policy/data/6-2/pick-place-l515-tea.zarr
+  horizon: ${horizon}
+  pad_before: ${eval:'${n_obs_steps}-1'}
+  pad_after: ${eval:'${n_action_steps}-1'}
+  seed: 42
+  val_ratio: 0.02
+  max_train_episodes: 90

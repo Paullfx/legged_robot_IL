@@ -11,7 +11,7 @@ import copy
 import os
 def depth_to_pointcloud_wo_color(depth_frame, workspace, pc):
     points = pc.calculate(depth_frame)
-    points             = np.asanyarray(points.get_vertices()).view(np.float32).reshape(-1, 3)
+    points = np.asanyarray(points.get_vertices()).view(np.float32).reshape(-1, 3)
     points = points[np.where((points[..., 0] > workspace[0][0]) & (points[..., 0] < workspace[0][1]) &
                     (points[..., 1] > workspace[1][0]) & (points[..., 1] < workspace[1][1]) &
                     (points[..., 2] > workspace[2][0]) & (points[..., 2] < workspace[2][1]))]
