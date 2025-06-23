@@ -6,7 +6,7 @@ import csv, os
 from std_msgs.msg import Float32, UInt16, UInt8
 from unitree_go.msg import LowState, SportModeState, WirelessController
 
-ROOT_SAVE_DIR = os.path.expanduser('~/data/quadruped_walk')
+ROOT_SAVE_DIR = os.path.expanduser('~/data/quadruped_walk_2') # '~/data/quadruped_walk'
 
 def timestamp_str():
     now = rclpy.clock.Clock().now().to_msg()
