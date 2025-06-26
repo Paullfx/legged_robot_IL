@@ -91,18 +91,15 @@ def main():
     # 写入zarr
     zarr_root = zarr.open(ZARR_PATH, mode='w')
 
-    # ==== 创建 data group ====
+    # ---- 创建 data group ----
     zarr_data = zarr_root.create_group('data')
-    zarr_data.create_dataset('state', data=all_agent_pose, chunks=(100, all_agent_pose.shape[1]), dtype='float32', overwrite=True)
+    zarr_data.create_dataset('agent_pose', data=all_agent_pose, chunks=(100, all_agent_pose.shape[1]), dtype='float32', overwrite=True)
     zarr_data.create_dataset('action', data=all_action, chunks=(100, all_action.shape[1]), dtype='float32', overwrite=True)
 
-    # ==== 创建 meta group ====
+    # ---- 创建 meta group ----
     zarr_meta = zarr_root.create_group('meta')
     zarr_meta.create_dataset('episode_ends', data=episode_ends, chunks=(100,), dtype='int64', overwrite=True)
-
-    # 如有需要还可以加其它meta属性
     zarr_meta.attrs['sampling_rate'] = 4
-
 
     print(f"已写入：{ZARR_PATH}")
 
