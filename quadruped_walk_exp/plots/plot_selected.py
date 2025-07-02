@@ -12,7 +12,7 @@ FOLDERS_OF_INTEREST = {
     "exp_50hz_20250625_114212",
 }
 COL      = "sport_pos0" # "low_m1_q" # "sport_pos0" # "sport_vel0"
-THRESH   = 0.05                                   # change magnitude
+THRESH   = 0.005                                   # change magnitude
 WIN      = pd.Timedelta(milliseconds=100)         # 0.1‑second window
 TS_FMT   = "%Y-%m-%d %H:%M:%S.%f"                  # timestamp format in CSV
 # -----------------------------------------------------------------------------
