@@ -11,17 +11,19 @@ CSV_FILES = [
     Path.home() / "data/quadruped_walk_2/exp_50hz_20250625_112636/all_topics.csv",
     # Path.home() / "data/quadruped_walk_2/exp_50hz_20250625_114212/all_topics.csv",
     # Path.home() / "data/quadruped_feedback_test/exp_50hz_20250702_184152/all_topics.csv",
-    Path.home() / "data/quadruped_feedback_test/exp_50hz_20250702_184339/all_topics.csv",
+    # Path.home() / "data/quadruped_feedback_test/exp_50hz_20250702_184339/all_topics.csv",
+    # Path.home() / "data/quadruped_feedback_test/exp_50hz_20250702_201312/all_topics.csv",
+    Path.home() / "data/quadruped_feedback_test/exp_50hz_20250702_203443/all_topics.csv",
 ]
 
 COLS_TO_PLOT = [
     "sport_pos0", "sport_vel0", "sport_vel1",
-    # "low_imu_gyro0", "low_imu_gyro1", "low_imu_gyro2",
-    # "low_imu_acc0", "low_imu_acc1", "low_imu_acc2",
+    "low_imu_gyro0", "low_imu_gyro1", "low_imu_gyro2",
+    "low_imu_acc0", "low_imu_acc1", "low_imu_acc2",
     "low_imu_rpy0", "low_imu_rpy1", "low_imu_rpy2"
     # "low_foot_force0", "low_foot_force1", "low_foot_force2", "low_foot_force3"
     # "low_foot_force_est0", "low_foot_force_est1", "low_foot_force_est2", "low_foot_force_est3"
-    "sport_foot_force0", "sport_foot_force2", "sport_foot_force3", "sport_foot_force1",
+    # "sport_foot_force0", "sport_foot_force2", "sport_foot_force3", "sport_foot_force1",
 ]
 THRESH   = 0.005                                   # change magnitude
 WIN      = pd.Timedelta(milliseconds=100)         # 0.1‑second window
