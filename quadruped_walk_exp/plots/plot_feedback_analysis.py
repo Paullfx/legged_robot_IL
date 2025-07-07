@@ -7,23 +7,33 @@ import numpy as np
 # -----------------------------------------------------------------------------
 # User‑tunable parameters
 CSV_FILES = [
+    
+    # walk 1 data
+    Path.home() / "data/quadruped_walk/exp_50hz_20250615_161025/all_topics.csv",
+    #Path.home() / "data/quadruped_walk/exp_50hz_20250615_162349/all_topics.csv",
+    #Path.home() / "data/quadruped_walk/exp_20250614_194204/all_topics.csv",
+
+    
+    # walk in straight line
     # Path.home() / "data/quadruped_walk_2/exp_50hz_20250625_111809/all_topics.csv",
     Path.home() / "data/quadruped_walk_2/exp_50hz_20250625_112636/all_topics.csv",
     # Path.home() / "data/quadruped_walk_2/exp_50hz_20250625_114212/all_topics.csv",
+
+    # walk with feedback, purpose is to find reliable reference sensor data, and to test the IMU sensitivity
     # Path.home() / "data/quadruped_feedback_test/exp_50hz_20250702_184152/all_topics.csv",
     # Path.home() / "data/quadruped_feedback_test/exp_50hz_20250702_184339/all_topics.csv",
     # Path.home() / "data/quadruped_feedback_test/exp_50hz_20250702_201312/all_topics.csv",
-    Path.home() / "data/quadruped_feedback_test/exp_50hz_20250702_203443/all_topics.csv",
+    # Path.home() / "data/quadruped_feedback_test/exp_50hz_20250702_203443/all_topics.csv",
 ]
 
 COLS_TO_PLOT = [
-    "sport_pos0", "sport_vel0", "sport_vel1",
+    "sport_pos0", "sport_vel0", "sport_vel1", "sport_yaw_speed",
     "low_imu_gyro0", "low_imu_gyro1", "low_imu_gyro2",
     "low_imu_acc0", "low_imu_acc1", "low_imu_acc2",
-    "low_imu_rpy0", "low_imu_rpy1", "low_imu_rpy2"
-    # "low_foot_force0", "low_foot_force1", "low_foot_force2", "low_foot_force3"
-    # "low_foot_force_est0", "low_foot_force_est1", "low_foot_force_est2", "low_foot_force_est3"
-    # "sport_foot_force0", "sport_foot_force2", "sport_foot_force3", "sport_foot_force1",
+    "low_imu_rpy0", "low_imu_rpy1", "low_imu_rpy2",
+    "low_foot_force0", "low_foot_force1", "low_foot_force2", "low_foot_force3",
+    "low_foot_force_est0", "low_foot_force_est1", "low_foot_force_est2", "low_foot_force_est3",
+    "sport_foot_force0", "sport_foot_force2", "sport_foot_force3", "sport_foot_force1",
 ]
 THRESH   = 0.005                                   # change magnitude
 WIN      = pd.Timedelta(milliseconds=100)         # 0.1‑second window
@@ -76,9 +86,9 @@ def load_and_trim(csv_path: Path) -> pd.DataFrame | None:
 
 
 # Create subplots
-n_cols = 3
-n_rows = int(np.ceil(len(COLS_TO_PLOT) / n_cols))
-fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, n_rows * 3), sharex=True)
+n_cols = 4  # Change the number of columns to 4
+n_rows = int(np.ceil(len(COLS_TO_PLOT) / n_cols))  # Recalculate the number of rows
+fig, axes = plt.subplots(n_rows, n_cols, figsize=(20, n_rows * 3), sharex=True)  # Adjust figure size
 axes = axes.flatten()
 found_any = False
 
@@ -114,7 +124,7 @@ if found_any:
     plt.xlabel("Aligned time (s)")
     handles, labels = axes[0].get_legend_handles_labels()
     fig.legend(handles, labels, loc='upper right', fontsize='small', title="Experiment")
-    plt.tight_layout(rect=[0, 0, 0.9, 0.96]) # Adjust layout to make space for suptitle and legend
+    plt.tight_layout(rect=[0, 0, 0.9, 0.96])  # Adjust layout to make space for suptitle and legend
     plt.show()
 else:
     print("❌  Nothing was plotted. Check file paths or data validity.")
