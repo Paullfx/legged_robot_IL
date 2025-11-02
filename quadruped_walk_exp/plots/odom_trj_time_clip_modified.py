@@ -5,7 +5,7 @@ import glob
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-# python3 odom_trj_time_clip.py --csv ~/data/quadruped_walk_2/exp_50hz_20251021_203302 --clip 50
+# python3 odom_trj_time_clip_modified.py --csv ~/data/quadruped_walk_2/exp_50hz_20251026_170225
 
 
 def find_latest_csv(search_dir=None):
@@ -95,6 +95,9 @@ def plot_traj(x, y, t, csv_path, out_path=None, title=None, timestamp_str=None, 
         x_shifted = x
         y_shifted = y
 
+    # For trajectory plot use absolute value of y_shifted
+    y_abs_shifted = np.abs(y_shifted)
+
     # Load extra data for subplots
     try:
         t_rpy0, rpy0, t_yaw, yaw_vel, col_rpy0, col_yaw_vel = load_extra(csv_path)
@@ -104,78 +107,98 @@ def plot_traj(x, y, t, csv_path, out_path=None, title=None, timestamp_str=None, 
 
     # Clip right-side subplots to first N seconds if requested
     if clip_right is not None:
-        mask_rpy0 = t_rpy0 <= clip_right
-        mask_yaw  = t_yaw  <= clip_right
-        mask_y    = t       <= clip_right
-        t_rpy0 = t_rpy0[mask_rpy0]
-        rpy0   = rpy0  [mask_rpy0]
-        t_yaw  = t_yaw [mask_yaw]
-        yaw_vel= yaw_vel[mask_yaw]
-        t_y    = t    [mask_y]
-        y_shifted_time = (y - y[0])[mask_y]
+        clip_time = min(clip_right, 50.0)
     else:
-        t_y = t
-        y_shifted_time = y - y[0] if len(y) else y
+        clip_time = 50.0
 
+    mask_rpy0 = t_rpy0 <= clip_time
+    mask_yaw  = t_yaw  <= clip_time
+    mask_y    = t     <= clip_time
+
+    t_rpy0 = t_rpy0[mask_rpy0]
+    rpy0   = rpy0[mask_rpy0]
+    t_yaw  = t_yaw [mask_yaw]
+    yaw_vel= yaw_vel[mask_yaw]
+
+    t_y = t[mask_y]
+    y_shifted_time = np.abs(y_shifted[mask_y])
+
+    import matplotlib as mpl
     from matplotlib.gridspec import GridSpec
-    fig = plt.figure(figsize=(20, 8))
+    # Define font sizes for different elements
+    base_fontsize = 50
+    title_fontsize = base_fontsize * 1.2
+    
+    # Set font sizes
+    mpl.rcParams.update({'font.size': base_fontsize})
+    
+    fig = plt.figure(figsize=(48, 41))
     gs  = GridSpec(3, 3, figure=fig, width_ratios=[1, 2, 2])
 
     # Trajectory subplot (left, spanning all rows)
     ax_traj = fig.add_subplot(gs[:, 0])
-    ax_traj.plot(y_shifted, x_shifted, '-o', markersize=2, linewidth=1)
+    ax_traj.plot(y_abs_shifted, x_shifted, '-o', markersize=2, linewidth=4)
     if len(x_shifted):
-        ax_traj.scatter([0], [0], c='green', s=40, label='start')
-        ax_traj.scatter([y_shifted[-1]], [x_shifted[-1]], c='red', s=40, label='end')
+        ax_traj.scatter([0], [0], c='green', s=280, label='start')
+        ax_traj.scatter([y_abs_shifted[-1]], [x_shifted[-1]], c='red', s=280, label='end')
 
-        ax_traj.axvline(0.25, color='gray', linestyle='--', linewidth=0.5)
+        # Add horizontal grid line at y = 0.25 (vertical axis value)
+        ax_traj.axhline(0.25, color='gray', linestyle='--', linewidth=0.5)
 
         # Set fixed limits for trajectory plot
         ax_traj.set_xlim(0.00, 0.75)
-        ax_traj.set_ylim(0.00, 6.0)
+        ax_traj.set_ylim(0.00, 7.0)
+
+    ax_traj.tick_params(axis='y', pad=15)
+    ax_traj.tick_params(axis='x', pad=35)
 
     ax_traj.set_aspect('equal', adjustable='box')
     ax_traj.set_xlabel('y (pos1, meter)')
     ax_traj.set_ylabel('x (pos0, meter)')
-    ax_traj.set_title('Trajectory')
-    ax_traj.legend()
+    ax_traj.set_title('Trajectory', pad=40, fontsize=title_fontsize)
+    # Place legend beneath the subplot
+    ax_traj.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), borderaxespad=0.)
     ax_traj.grid(True)
 
     # IMU rpy0 subplot (top right)
     ax_rpy0 = fig.add_subplot(gs[0, 1:])
-    ax_rpy0.plot(t_rpy0, rpy0, label='imu_rpy0')
-    ax_rpy0.axhline(0.070, color='r', linestyle='--', label='+0.070')
-    ax_rpy0.axhline(-0.070, color='b', linestyle='--', label='-0.070')
+    ax_rpy0.plot(t_rpy0, rpy0, label='imu_rpy0', linewidth=4)
+    ax_rpy0.axhline(0.070, color='r', linestyle='--', label='+0.070', linewidth=4)
+    ax_rpy0.axhline(-0.070, color='b', linestyle='--', label='-0.070', linewidth=4)
+    ax_rpy0.set_xlim(0, 50.0)
     ax_rpy0.set_ylabel('imu_rpy0 (rad)')
-    ax_rpy0.set_title('IMU roll angle (rpy0)')
-    ax_rpy0.legend()
+    ax_rpy0.set_title('IMU roll angle (rpy0)', fontsize=title_fontsize)
+    # Place legend below the subplot
+    ax_rpy0.legend(loc='lower right', bbox_to_anchor=(0.5, -0.8), ncol=3)
     ax_rpy0.grid(True)
 
     # Yaw velocity subplot (middle right)
     ax_yaw = fig.add_subplot(gs[1, 1:])
-    ax_yaw.plot(t_yaw, yaw_vel, label='yaw_velocity')
+    ax_yaw.plot(t_yaw, yaw_vel, label='yaw_velocity', linewidth=4)
+    ax_yaw.set_xlim(0, 50.0)
     ax_yaw.set_ylabel('yaw_velocity (rad/s)')
-    ax_yaw.set_title('Yaw Velocity')
-    ax_yaw.legend()
+    ax_yaw.set_title('Yaw Velocity', fontsize=title_fontsize)
+    # Place legend below the subplot
+    ax_yaw.legend(loc='lower right', bbox_to_anchor=(0.2, -0.6), ncol=3)
     ax_yaw.grid(True)
 
     # y (pos1) subplot (bottom right)
     ax_y = fig.add_subplot(gs[2, 1:])
-    ax_y.plot(t_y, y_shifted_time, label='y (pos1) - y[0]')
-    if len(y_shifted_time):
-        ax_y.axhline(0, color='g', linestyle='--', label='y[0] (start, shifted to 0)')
+    ax_y.plot(t_y, y_shifted_time, label='y (pos1) - y[0]', linewidth=4)
+    ax_y.axhline(0, color='g', linestyle='--', label='y[0] (start, shifted to 0)')
+    ax_y.set_xlim(0, clip_time)
     ax_y.set_xlabel('Time (s)')
     ax_y.set_ylabel('y (pos1, meter)')
-    ax_y.set_title('y (pos1) over time (start at 0)')
-    ax_y.legend()
+    ax_y.set_title('y position (pos1) over time (start at 0)', fontsize=title_fontsize)
+    # Place legend below the subplot
+    ax_y.legend(loc='lower left', bbox_to_anchor=(0, -0.9), ncol=3)
     ax_y.grid(True)
 
-    if title is None:
-        title = os.path.basename(csv_path)
+    # Only show the start timestamp in the title, at 50% of the doubled font size
     if timestamp_str:
-        fig.suptitle(f'Trajectory and IMU/Yaw: {title}\nStart timestamp: {timestamp_str}', fontsize=16)
+        fig.suptitle(f'Start timestamp: {timestamp_str}', fontsize=mpl.rcParams['font.size'] * 0.5)
     else:
-        fig.suptitle(f'Trajectory and IMU/Yaw: {title}', fontsize=16)
+        fig.suptitle('', fontsize=mpl.rcParams['font.size'] * 0.5)
 
     plt.tight_layout(rect=[0, 0, 1, 0.96])
     if out_path is None:
@@ -186,6 +209,8 @@ def plot_traj(x, y, t, csv_path, out_path=None, title=None, timestamp_str=None, 
         plt.show()
     except Exception:
         pass
+
+
 
 
 def main():

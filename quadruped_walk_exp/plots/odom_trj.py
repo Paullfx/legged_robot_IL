@@ -165,7 +165,7 @@ def plot_traj(x, y, t, csv_path, out_path=None, title=None, timestamp_str=None):
         fig.suptitle(f'Trajectory and IMU/Yaw: {title}', fontsize=16)
     plt.tight_layout(rect=[0, 0, 1, 0.96])
     if out_path is None:
-        out_path = os.path.splitext(csv_path)[0] + '_traj.png'
+        out_path = os.path.splitext(csv_path)[0] + '_odom_traj.png'
     plt.savefig(out_path, dpi=150)
     print('Saved plot to', out_path)
     try:

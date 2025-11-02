@@ -2,15 +2,12 @@
 import rclpy
 from rclpy.node import Node
 from datetime import datetime, timezone, timedelta
-import csv, os, time
+import csv, os
 from std_msgs.msg import Float32, UInt16, UInt8
 from geometry_msgs.msg import Twist
 from unitree_go.msg import LowState, SportModeState, WirelessController
-from aruco_opencv_msgs.msg import ArucoDetection
 
-# works for both vision feedback and force feedback
-
-ROOT_SAVE_DIR = os.path.expanduser('~/data/quadruped_walk_2')  # '~/data/quadruped_walk'
+ROOT_SAVE_DIR = os.path.expanduser('~/data/quadruped_walk_2') # '~/data/quadruped_walk'
 
 def timestamp_str():
     now = rclpy.clock.Clock().now().to_msg()
@@ -19,7 +16,7 @@ def timestamp_str():
 
 def make_save_folder():
     ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-    folder = os.path.join(ROOT_SAVE_DIR, f'exp_50hz_{ts}')  # exp_{ts}, exp_50hz_{ts}
+    folder = os.path.join(ROOT_SAVE_DIR, f'exp_50hz_{ts}') # exp_{ts}, exp_50hz_{ts}
     os.makedirs(folder, exist_ok=True)
     return folder
 
@@ -73,10 +70,8 @@ class AllTopicsLogger(Node):
             'lf_low': None,
             'sport': None,
             'lf_sport': None,
-            'cmd_vel': None,
-            'aruco_xyz': None,   # (x, y, z) of first detected marker
+            'cmd_vel': None
         }
-        self._last_aruco_update = 0.0
 
         # CSV header
         header = ['timestamp']
@@ -85,9 +80,6 @@ class AllTopicsLogger(Node):
         # cmd_vel (6 values)
         header += ['cmd_vel_lin_x', 'cmd_vel_lin_y', 'cmd_vel_lin_z',
                    'cmd_vel_ang_x', 'cmd_vel_ang_y', 'cmd_vel_ang_z']
-        # ArUco detection (x,y,z)
-        header += ['aruco_x', 'aruco_y', 'aruco_z']
-
         # lowstate/lf_lowstate
         for prefix in ['low', 'lf_low']:
             header += [f'{prefix}_head0', f'{prefix}_head1', f'{prefix}_level_flag', f'{prefix}_frame_reserve',
@@ -129,19 +121,15 @@ class AllTopicsLogger(Node):
             header += [f'{prefix}_foot_speed_body{i}' for i in range(12)]
         self.writer.writerow(header)
 
-        # Topic subscriptions
+        # topic subscription
         self.create_subscription(WirelessController, '/wirelesscontroller', self.cb_wireless, 10)
         self.create_subscription(LowState, '/lowstate', self.cb_lowstate, 10)
         self.create_subscription(LowState, '/lf/lowstate', self.cb_lflow, 10)
         self.create_subscription(SportModeState, '/sportmodestate', self.cb_sport, 10)
         self.create_subscription(SportModeState, '/lf/sportmodestate', self.cb_lfsport, 10)
-        self.create_subscription(Twist, '/cmd_vel', self.cb_cmdvel, 10)
-        self.create_subscription(ArucoDetection, '/aruco_detections', self.cb_aruco, 10)
 
-        # 50 Hz CSV logging
-        self.create_timer(0.02, self.record_row)
+        self.create_timer(0.02, self.record_row) # set the recording freq #0.05, 0.02
 
-    # ───────────────────── Callbacks ─────────────────────
     def cb_wireless(self, msg):
         self.latest['wireless'] = [msg.lx, msg.ly, msg.rx, msg.ry, msg.keys]
 
@@ -150,16 +138,6 @@ class AllTopicsLogger(Node):
             msg.linear.x, msg.linear.y, msg.linear.z,
             msg.angular.x, msg.angular.y, msg.angular.z
         ]
-
-    def cb_aruco(self, msg: ArucoDetection):
-        """
-        Grab the first detected marker's (x,y,z). If no markers this message,
-        keep the last seen values (do not overwrite with blanks).
-        """
-        if msg.markers:
-            p = msg.markers[0].pose.position
-            self.latest['aruco_xyz'] = [float(p.x), float(p.y), float(p.z)]
-            self._last_aruco_update = time.time()
 
     def cb_lowstate(self, msg):
         self.latest['low'] = msg
@@ -173,42 +151,35 @@ class AllTopicsLogger(Node):
     def cb_lfsport(self, msg):
         self.latest['lf_sport'] = msg
 
-    # ───────────────────── Logger ─────────────────────
     def record_row(self):
         row = [timestamp_str()]
-
         # wirelesscontroller
-        row += (self.latest['wireless'] or ['']*5)
-
-        # cmd_vel (6)
-        row += (self.latest['cmd_vel'] or ['']*6)
-
-        # ArUco (x,y,z) — last seen values; blanks if never seen yet
-        row += (self.latest['aruco_xyz'] or ['','',''])
-
-        # lowstate / lf_lowstate
+        wc = self.latest['wireless'] or ['']*5
+        row += wc
+        # cmd_vel (6 values)
+        cv = self.latest['cmd_vel'] or ['']*6
+        row += cv
+        # lowstate/lf_lowstate
         for key in ['low', 'lf_low']:
             if self.latest[key]:
                 row += unpack_lowstate(self.latest[key], key)
             else:
-                row += [''] * (
-                    2+1+1+2+2+1 +     # head+level_flag+frame_reserve+sn+version+bandwidth
-                    4+3+3+3+1 +       # imu
-                    12*12 +           # 12 motors * 12 fields
-                    6+2+2+15 +        # bms
-                    4+4+1+40+1+1+1+1+1+1+4+1+1  # foot_force etc.
+                row += ['']*(
+                    2+1+1+2+2+1 +    # head+level_flag+frame_reserve+sn+version+bandwidth
+                    4+3+3+3+1 +      # imu
+                    12*12 +          # 12 motors * 12 fields
+                    6+2+2+15 +       # bms
+                    4+4+1+40+1+1+1+1+1+1+4+1+1  # foot_force等
                 )
-
-        # sportmodestate / lf_sportmodestate
+        # sportmodestate/lf_sportmodestate
         for key in ['sport', 'lf_sport']:
             if self.latest[key]:
                 row += unpack_sportmodestate(self.latest[key], key)
             else:
-                row += [''] * (
-                    3 + 4+3+3+3+1 +  # stamp + imu
-                    1+1+1+1+3+1+3+1+4+4+12+12
+                row += ['']*(
+                    3 + 4+3+3+3+1 +  # stamp+imu
+                    1+1+1+1+3+1+3+1+4+4+12+12   # 剩下全部字段
                 )
-
         self.writer.writerow(row)
 
     def destroy_node(self):
