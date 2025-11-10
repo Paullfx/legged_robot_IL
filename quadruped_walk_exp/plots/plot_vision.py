@@ -7,7 +7,9 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-# python3 plot_vision.py --csv ~/data/quadruped_walk_2/exp_50hz_2025xxxx_xxxxxx
+# python3 plot_vision.py --csv ~/data/quadruped_walk_2/exp_50hz_20251104_173020
+
+# python3 plot_vision.py --csv ~/data/quadruped_walk_2/exp_50hz_20251104_171821
 
 
 def smart_pick(df, *cands):
