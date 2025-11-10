@@ -257,7 +257,7 @@ def plot_figure2_metrics(t_yaw, yaw_vel, t_all, y_shifted_signed, t_aruco, aruco
     ax_aruco.plot(t_aruco_c, aruco_c, linewidth=2.5, label='aruco_x')
     ax_aruco.axhline(0, color='gray', linestyle='--', linewidth=1, alpha=0.7)
     ax_aruco.set_xlim(0, clip_time)
-    ax_aruco.set_ylabel('aruco_x normalized')
+    ax_aruco.set_ylabel('aruco_x (normalized)')
     ax_aruco.set_title('ArUco X Position (centered)')
     ax_aruco.grid(True, alpha=0.4)
     ax_aruco.legend(loc='upper center', bbox_to_anchor=(0.5, -0.10), ncol=1, frameon=False)
