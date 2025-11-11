@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 import rclpy
 from rclpy.node import Node
 from datetime import datetime, timezone, timedelta
 import csv, os
-from std_msgs.msg import Float32, UInt16, UInt8, Int32MultiArray
+from std_msgs.msg import Float32, UInt16, UInt8
 from geometry_msgs.msg import Twist
-from builtin_interfaces.msg import Time as RosTime
 from unitree_go.msg import LowState, SportModeState, WirelessController
 
-ROOT_SAVE_DIR = os.path.expanduser('~/data/quadruped_walk_2')  # '~/data/quadruped_walk'
+ROOT_SAVE_DIR = os.path.expanduser('~/data/quadruped_walk_2') # '~/data/quadruped_walk'
 
 def timestamp_str():
     now = rclpy.clock.Clock().now().to_msg()
@@ -18,7 +16,7 @@ def timestamp_str():
 
 def make_save_folder():
     ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-    folder = os.path.join(ROOT_SAVE_DIR, f'exp_50hz_{ts}')  # exp_{ts}, exp_50hz_{ts}
+    folder = os.path.join(ROOT_SAVE_DIR, f'exp_50hz_{ts}') # exp_{ts}, exp_50hz_{ts}
     os.makedirs(folder, exist_ok=True)
     return folder
 
@@ -72,12 +70,7 @@ class AllTopicsLogger(Node):
             'lf_low': None,
             'sport': None,
             'lf_sport': None,
-            'cmd_vel': None,
-            'dp_infer': None,
-            'proj_trigger_time': None,   # (sec, nsec)
-            'proj_trigger_event': 0,     # 1 if a new trigger received since last row
-            'proj_counts': None,         # [total, pos, neg]
-            'inference_hz': None         # float
+            'cmd_vel': None
         }
 
         # CSV header
@@ -87,15 +80,6 @@ class AllTopicsLogger(Node):
         # cmd_vel (6 values)
         header += ['cmd_vel_lin_x', 'cmd_vel_lin_y', 'cmd_vel_lin_z',
                    'cmd_vel_ang_x', 'cmd_vel_ang_y', 'cmd_vel_ang_z']
-        # dp_inference (6 values) —— 新增
-        header += ['dp_lin_x', 'dp_lin_y', 'dp_lin_z',
-                   'dp_ang_x', 'dp_ang_y', 'dp_ang_z']
-        # projection trigger time & counts —— 新增
-        header += ['proj_trigger_sec', 'proj_trigger_nanosec', 'proj_trigger_event']
-        header += ['proj_counts_total', 'proj_counts_pos', 'proj_counts_neg']
-        # inference hz —— 新增
-        header += ['inference_hz']
-
         # lowstate/lf_lowstate
         for prefix in ['low', 'lf_low']:
             header += [f'{prefix}_head0', f'{prefix}_head1', f'{prefix}_level_flag', f'{prefix}_frame_reserve',
@@ -144,18 +128,9 @@ class AllTopicsLogger(Node):
         self.create_subscription(SportModeState, '/sportmodestate', self.cb_sport, 10)
         self.create_subscription(SportModeState, '/lf/sportmodestate', self.cb_lfsport, 10)
 
-        # 新增：订阅 /cmd_vel、/dp_inference、/projection_* 与 /inference_hz
-        self.create_subscription(Twist, '/cmd_vel', self.cb_cmdvel, 50)
-        self.create_subscription(Twist, '/dp_inference', self.cb_dpinfer, 50)
-        self.create_subscription(RosTime, '/projection_trigger_time', self.cb_proj_time, 50)
-        self.create_subscription(Int32MultiArray, '/projection_offset_counts', self.cb_proj_counts, 50)
-        self.create_subscription(Float32, '/inference_hz', self.cb_infer_hz, 50)
+        self.create_timer(0.02, self.record_row) # set the recording freq #0.05, 0.02
 
-        # set the recording freq #0.05, 0.02 -> 50Hz
-        self.create_timer(0.02, self.record_row)
-
-    # ---------------- Callbacks ----------------
-    def cb_wireless(self, msg: WirelessController):
+    def cb_wireless(self, msg):
         self.latest['wireless'] = [msg.lx, msg.ly, msg.rx, msg.ry, msg.keys]
 
     def cb_cmdvel(self, msg: Twist):
@@ -164,72 +139,26 @@ class AllTopicsLogger(Node):
             msg.angular.x, msg.angular.y, msg.angular.z
         ]
 
-    def cb_dpinfer(self, msg: Twist):
-        self.latest['dp_infer'] = [
-            msg.linear.x, msg.linear.y, msg.linear.z,
-            msg.angular.x, msg.angular.y, msg.angular.z
-        ]
-
-    def cb_proj_time(self, msg: RosTime):
-        # 记录最后一次触发的时间戳，并在下一行打 event=1 标记
-        self.latest['proj_trigger_time'] = (msg.sec, msg.nanosec)
-        self.latest['proj_trigger_event'] = 1
-
-    def cb_proj_counts(self, msg: Int32MultiArray):
-        # 期望 [total, pos, neg]
-        data = list(msg.data) if msg.data is not None else []
-        # 归一到 3 长度
-        if len(data) < 3:
-            data += [0] * (3 - len(data))
-        self.latest['proj_counts'] = data[:3]
-
-    def cb_infer_hz(self, msg: Float32):
-        self.latest['inference_hz'] = float(msg.data)
-
-    def cb_lowstate(self, msg: LowState):
+    def cb_lowstate(self, msg):
         self.latest['low'] = msg
 
-    def cb_lflow(self, msg: LowState):
+    def cb_lflow(self, msg):
         self.latest['lf_low'] = msg
 
-    def cb_sport(self, msg: SportModeState):
+    def cb_sport(self, msg):
         self.latest['sport'] = msg
 
-    def cb_lfsport(self, msg: SportModeState):
+    def cb_lfsport(self, msg):
         self.latest['lf_sport'] = msg
 
-    # ---------------- Recording ----------------
     def record_row(self):
         row = [timestamp_str()]
-
         # wirelesscontroller
         wc = self.latest['wireless'] or ['']*5
         row += wc
-
         # cmd_vel (6 values)
         cv = self.latest['cmd_vel'] or ['']*6
         row += cv
-
-        # dp_inference (6 values) —— 新增
-        dp = self.latest['dp_infer'] or ['']*6
-        row += dp
-
-        # projection trigger time + event 标记
-        if self.latest['proj_trigger_time'] is not None:
-            sec, nsec = self.latest['proj_trigger_time']
-        else:
-            sec, nsec = '', ''
-        event = self.latest['proj_trigger_event'] or 0
-        row += [sec, nsec, event]
-
-        # counts
-        counts = self.latest['proj_counts'] or ['', '', '']
-        row += counts
-
-        # inference_hz
-        hz = self.latest['inference_hz']
-        row += [hz if hz is not None else '']
-
         # lowstate/lf_lowstate
         for key in ['low', 'lf_low']:
             if self.latest[key]:
@@ -251,21 +180,9 @@ class AllTopicsLogger(Node):
                     3 + 4+3+3+3+1 +  # stamp+imu
                     1+1+1+1+3+1+3+1+4+4+12+12   # 剩下全部字段
                 )
-
         self.writer.writerow(row)
-        # 写完即刷
-        self.file.flush()
-        os.fsync(self.file.fileno())
-
-        # 仅对触发事件标记进行“行后清零”，避免持续为1
-        self.latest['proj_trigger_event'] = 0
 
     def destroy_node(self):
-        try:
-            self.file.flush()
-            os.fsync(self.file.fileno())
-        except Exception:
-            pass
         self.file.close()
         super().destroy_node()
 

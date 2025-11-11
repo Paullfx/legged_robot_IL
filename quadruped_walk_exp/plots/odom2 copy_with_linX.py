@@ -131,7 +131,7 @@ def plot_figure1_traj(x, y, t, out_path, a4=False, dpi=300):
         'axes.titlesize': base_fontsize * scale_factor * 1.2,
         'axes.labelsize': base_fontsize * scale_factor,
         'legend.fontsize': base_fontsize * scale_factor,
-        'xtick.labelsize': base_fontsize * 0.3,
+        'xtick.labelsize': base_fontsize * 0.6,
         'ytick.labelsize': base_fontsize 
     })
 
@@ -188,32 +188,26 @@ def plot_figure2_metrics(t_rpy0, rpy0, t_yaw, yaw_vel,
     import matplotlib as mpl
     from matplotlib.gridspec import GridSpec
 
-    # --- compact typography & spacing ---
-    mpl.rcParams.update({
-        'axes.titlepad': 2,           # tighter title padding
-        'legend.borderaxespad': 0.2,
-        'legend.handlelength': 1.2,
-        'legend.handletextpad': 0.4,
-        'legend.borderpad': 0.3,
-    })
-
+    # --- layout & typography ---
     if a4:
+        # A4 portrait works better for a tall single column
         figsize = (8.27, 11.69)   # A4 portrait
         base_fontsize = 12
     else:
-        figsize = (9.5, 12.5)     # tall single column
-        base_fontsize = 14
+        figsize = (10, 14)        # tall single column
+        base_fontsize = 16
 
-    scale = 1.0
+    scale_factor = 1.05
     mpl.rcParams.update({
-        'font.size': base_fontsize * scale,
-        'axes.titlesize': base_fontsize * scale * 1.05,
-        'axes.labelsize': base_fontsize * scale,
-        'xtick.labelsize': base_fontsize * scale * 0.9,
-        'ytick.labelsize': base_fontsize * scale * 0.9
+        'font.size': base_fontsize * scale_factor,
+        'axes.titlesize': base_fontsize * scale_factor * 1.05,
+        'axes.labelsize': base_fontsize * scale_factor,
+        'legend.fontsize': base_fontsize * scale_factor * 0.95,
+        'xtick.labelsize': base_fontsize * scale_factor * 0.9,
+        'ytick.labelsize': base_fontsize * scale_factor * 0.9
     })
-    mpl.rcParams['legend.fontsize'] = base_fontsize * scale * 0.7
-    # --- helpers ---
+
+    # --- clip series by time window ---
     def clip_by_time(tt, yy):
         if tt.size == 0 or yy.size == 0:
             return tt, yy
@@ -225,43 +219,40 @@ def plot_figure2_metrics(t_rpy0, rpy0, t_yaw, yaw_vel,
     t_yaw_c,  yaw_c  = clip_by_time(t_yaw,  yaw_vel)
     t_y_c,    y_c    = clip_by_time(t_all,  y_shifted_signed)
 
-    # dp/cmd series (NO dp_lin_x)
+    # dp/cmd series
     def fetch(name):
         return dp_cmd_dict.get(name, (np.array([]), np.array([])))
     t_dp_ang,  dp_ang  = fetch('dp_ang_z')
     t_cmd_ang, cmd_ang = fetch('cmd_vel_ang_z')
+    t_dp_x,    dp_x    = fetch('dp_lin_x')
     t_dp_y,    dp_y    = fetch('dp_lin_y')
 
     t_dp_ang_c,  dp_ang_c  = clip_by_time(t_dp_ang,  dp_ang)
     t_cmd_ang_c, cmd_ang_c = clip_by_time(t_cmd_ang, cmd_ang)
+    t_dp_x_c,    dp_x_c    = clip_by_time(t_dp_x,    dp_x)
     t_dp_y_c,    dp_y_c    = clip_by_time(t_dp_y,    dp_y)
 
-    # --- figure: single column of 4 stacked axes ---
-    fig = plt.figure(figsize=figsize, constrained_layout=False)
-    gs = GridSpec(nrows=4, ncols=1, figure=fig, hspace=0.12)  # tighter hspace
-
-    # share x across all; hide upper x tick labels
-    ax1 = fig.add_subplot(gs[0, 0])
-    ax2 = fig.add_subplot(gs[1, 0], sharex=ax1)
-    ax3 = fig.add_subplot(gs[2, 0], sharex=ax1)
-    ax4 = fig.add_subplot(gs[3, 0], sharex=ax1)
+    # --- figure: single column of 5 stacked axes ---
+    fig = plt.figure(figsize=figsize, constrained_layout=True)
+    gs = GridSpec(nrows=5, ncols=1, figure=fig, hspace=0.35)
 
     # 1) IMU roll (rpy0)
+    ax1 = fig.add_subplot(gs[0, 0], sharex=None)
     if t_rpy0_c.size and rpy0_c.size:
         ax1.plot(t_rpy0_c, rpy0_c, linewidth=2.0, label='imu_rpy0')
-    ax1.axhline( 0.080, linestyle='--', linewidth=1.0, label='+0.080')
-    ax1.axhline(-0.080, linestyle='--', linewidth=1.0, label='-0.080')
+    ax1.axhline( 0.070, linestyle='--', linewidth=1.0, label='+0.070')
+    ax1.axhline(-0.070, linestyle='--', linewidth=1.0, label='-0.070')
     ax1.set_xlim(0, clip_time)
     ax1.set_ylabel('rpy0 (rad)')
-    ax1.set_title('IMU roll angle (rpy0)', pad=2)
+    ax1.set_title('IMU roll angle (rpy0)')
     ax1.grid(True, alpha=0.4)
-    ax1.legend(loc='upper right', frameon=False)
-    ax1.tick_params(labelbottom=False)
+    ax1.legend(loc='upper center', bbox_to_anchor=(0.5, -0.22), ncol=3, frameon=False)
 
     # 2) Yaw velocity (sensor vs DP vs cmd)
+    ax2 = fig.add_subplot(gs[1, 0], sharex=None)
     handles, labels = [], []
     if t_yaw_c.size and yaw_c.size:
-        h1 = ax2.plot(t_yaw_c, yaw_c, linewidth=1.0, label='yaw_velocity (sensor)')[0]
+        h1 = ax2.plot(t_yaw_c, yaw_c, linewidth=2.0, label='yaw_velocity (sensor)')[0]
         handles.append(h1); labels.append(h1.get_label())
     if t_dp_ang_c.size and dp_ang_c.size:
         h2 = ax2.plot(t_dp_ang_c, dp_ang_c, linewidth=1.8, label='dp_ang_z')[0]
@@ -271,43 +262,51 @@ def plot_figure2_metrics(t_rpy0, rpy0, t_yaw, yaw_vel,
         handles.append(h3); labels.append(h3.get_label())
     ax2.set_xlim(0, clip_time)
     ax2.set_ylabel('yaw (rad/s)')
-    ax2.set_title('Yaw Velocity (sensor vs DP vs cmd)', pad=2)
+    ax2.set_title('Yaw Velocity (sensor vs DP vs cmd)')
     ax2.grid(True, alpha=0.4)
     if handles:
-        ax2.legend(handles, labels, loc='upper right', frameon=False)
-    ax2.tick_params(labelbottom=False)
+        ax2.legend(handles, labels, loc='upper center',
+                   bbox_to_anchor=(0.5, -0.22), ncol=3, frameon=False)
 
     # 3) |y - y0| over time
+    ax3 = fig.add_subplot(gs[2, 0], sharex=None)
     if t_y_c.size and y_c.size:
         ax3.plot(t_y_c, np.abs(y_c), linewidth=2.0, label='|y - y0|')
     ax3.axhline(0, linestyle='--', linewidth=1.0, label='start y0')
     ax3.set_xlim(0, clip_time)
     ax3.set_ylabel('y (m)')
-    ax3.set_title('y position over time (start at 0)', pad=2)
+    ax3.set_title('y position over time (start at 0)')
     ax3.grid(True, alpha=0.4)
-    ax3.legend(loc='upper right', frameon=False)
-    ax3.tick_params(labelbottom=False)
+    ax3.legend(loc='upper center', bbox_to_anchor=(0.5, -0.28), ncol=2, frameon=False)
 
-    # 4) dp_lin_y
-    if t_dp_y_c.size and dp_y_c.size:
-        ax4.plot(t_dp_y_c, dp_y_c, linewidth=2.0, label='dp_lin_y')
+    # 4) dp_lin_x
+    ax4 = fig.add_subplot(gs[3, 0], sharex=None)
+    if t_dp_x_c.size and dp_x_c.size:
+        ax4.plot(t_dp_x_c, dp_x_c, linewidth=2.0, label='dp_lin_x')
     ax4.set_xlim(0, clip_time)
-    ax4.set_xlabel('Time (s)')
     ax4.set_ylabel('m/s')
-    ax4.set_title('DP linear y', pad=2)
+    ax4.set_title('DP linear x')
     ax4.grid(True, alpha=0.4)
-    ax4.legend(loc='upper right', frameon=False)
+    ax4.legend(loc='upper center', bbox_to_anchor=(0.5, -0.22), ncol=1, frameon=False)
+    # ax4.set_visible(False)
 
-    # tighten outer margins
-    fig.subplots_adjust(top=0.97, bottom=0.07, left=0.10, right=0.98, hspace=0.10)
+    # 5) dp_lin_y
+    ax5 = fig.add_subplot(gs[4, 0], sharex=None)
+    if t_dp_y_c.size and dp_y_c.size:
+        ax5.plot(t_dp_y_c, dp_y_c, linewidth=2.0, label='dp_lin_y')
+    ax5.set_xlim(0, clip_time)
+    ax5.set_xlabel('Time (s)')
+    ax5.set_ylabel('m/s')
+    ax5.set_title('DP linear y')
+    ax5.grid(True, alpha=0.4)
+    ax5.legend(loc='upper center', bbox_to_anchor=(0.5, -0.22), ncol=1, frameon=False)
 
     fig.savefig(out_path, dpi=dpi, bbox_inches='tight')
-    print('Saved Figure 2 (metrics, compact single-column) to', out_path)
+    print('Saved Figure 2 (metrics, single-column x5) to', out_path)
     try:
         plt.show()
     except Exception:
         pass
-
 
 
 # -------------------- 主流程 --------------------

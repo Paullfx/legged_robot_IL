@@ -85,14 +85,9 @@ def _get_time_array(df):
     return np.arange(len(df))
 
 def load_dp_cmd_series(df):
-    """
-    读取 dp/cmd 相关列：
-      dp_ang_z, cmd_vel_ang_z, dp_lin_x, dp_lin_y
-    返回：t, dict(series_name -> (t_masked, y_masked))
-    """
     t_all = _get_time_array(df)
-
     out = {}
+
     def fetch(col):
         if col in df.columns:
             y = pd.to_numeric(df[col], errors='coerce').to_numpy()
@@ -101,11 +96,13 @@ def load_dp_cmd_series(df):
         else:
             return np.array([]), np.array([])
 
-    out['dp_ang_z']      = fetch('dp_ang_z')
-    out['cmd_vel_ang_z'] = fetch('cmd_vel_ang_z')
-    out['dp_lin_x']      = fetch('dp_lin_x')
-    out['dp_lin_y']      = fetch('dp_lin_y')
+    out['dp_ang_z']        = fetch('dp_ang_z')
+    out['cmd_vel_ang_z']   = fetch('cmd_vel_ang_z')
+    out['dp_lin_x']        = fetch('dp_lin_x')       # (kept for completeness; not plotted)
+    out['dp_lin_y']        = fetch('dp_lin_y')
+    out['cmd_vel_lin_y']   = fetch('cmd_vel_lin_y')  # <-- NEW
     return out
+
 
 # -------------------- 作图：图1（单独的轨迹图） --------------------
 
@@ -226,15 +223,19 @@ def plot_figure2_metrics(t_rpy0, rpy0, t_yaw, yaw_vel,
     t_y_c,    y_c    = clip_by_time(t_all,  y_shifted_signed)
 
     # dp/cmd series (NO dp_lin_x)
+    # dp/cmd series (NO dp_lin_x in plots)
     def fetch(name):
         return dp_cmd_dict.get(name, (np.array([]), np.array([])))
+
     t_dp_ang,  dp_ang  = fetch('dp_ang_z')
     t_cmd_ang, cmd_ang = fetch('cmd_vel_ang_z')
     t_dp_y,    dp_y    = fetch('dp_lin_y')
+    t_cmd_y,   cmd_y   = fetch('cmd_vel_lin_y')   # <-- NEW
 
     t_dp_ang_c,  dp_ang_c  = clip_by_time(t_dp_ang,  dp_ang)
     t_cmd_ang_c, cmd_ang_c = clip_by_time(t_cmd_ang, cmd_ang)
     t_dp_y_c,    dp_y_c    = clip_by_time(t_dp_y,    dp_y)
+    t_cmd_y_c,   cmd_y_c   = clip_by_time(t_cmd_y,   cmd_y)  # <-- NEW
 
     # --- figure: single column of 4 stacked axes ---
     fig = plt.figure(figsize=figsize, constrained_layout=False)
@@ -288,13 +289,15 @@ def plot_figure2_metrics(t_rpy0, rpy0, t_yaw, yaw_vel,
     ax3.legend(loc='upper right', frameon=False)
     ax3.tick_params(labelbottom=False)
 
-    # 4) dp_lin_y
+    # 4) dp_lin_y (+ cmd_lin_y)
     if t_dp_y_c.size and dp_y_c.size:
         ax4.plot(t_dp_y_c, dp_y_c, linewidth=2.0, label='dp_lin_y')
+    if t_cmd_y_c.size and cmd_y_c.size:
+        ax4.plot(t_cmd_y_c, cmd_y_c, linewidth=1.6, label='cmd_vel_lin_y')  # dashed
     ax4.set_xlim(0, clip_time)
     ax4.set_xlabel('Time (s)')
     ax4.set_ylabel('m/s')
-    ax4.set_title('DP linear y', pad=2)
+    ax4.set_title('DP linear y (with cmd)', pad=2)
     ax4.grid(True, alpha=0.4)
     ax4.legend(loc='upper right', frameon=False)
 
