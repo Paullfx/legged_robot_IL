@@ -4,8 +4,9 @@ import pandas as pd
 import zarr
 from termcolor import cprint   
 
-ROOT_DIR = "/home/hamilton/data/quadruped_walk" #/home/hamilton/data/quadruped_walk
-ZARR_PATH = os.path.join(ROOT_DIR, "quadruped_walk_4hz.zarr")  # file path for the zarr results
+#ROOT_DIR = "/home/hamilton/data/quadruped_walk" #/home/hamilton/data/quadruped_walk
+ROOT_DIR = "/Users/lyo/Desktop/3/fp/quadruped_training_data"
+ZARR_PATH = os.path.join(ROOT_DIR, "quadruped_walk_10hz.zarr")  # file path for the zarr results
 MOTOR_IDX = list(range(12))
 Q_COLS = [f'low_m{i}_q' for i in MOTOR_IDX]
 
@@ -13,16 +14,24 @@ def find_demo_folders(root_dir):
     """
     找到所有以 'exp', 'exp_50hz' 开头，且包含 'all_topics.csv' 的目录
     """
+    #folders = []
+    #for folder in os.listdir(root_dir):
+        #folder_path = os.path.join(root_dir, folder)
+        #if not os.path.isdir(folder_path):
+            #continue
+        #if folder.startswith("exp_50hz") or folder.startswith("exp"):
+            #csv_path = os.path.join(folder_path, 'all_topics.csv')
+            #if os.path.isfile(csv_path):
+                #folders.append((folder, folder_path, csv_path))
+    #return folders
     folders = []
-    for folder in os.listdir(root_dir):
-        folder_path = os.path.join(root_dir, folder)
-        if not os.path.isdir(folder_path):
-            continue
-        if folder.startswith("exp_50hz") or folder.startswith("exp"):
-            csv_path = os.path.join(folder_path, 'all_topics.csv')
-            if os.path.isfile(csv_path):
-                folders.append((folder, folder_path, csv_path))
-    return folders
+    for root, dirs, files in os.walk(root_dir):
+        if "all_topics.csv" in files:
+            foldername = os.path.basename(root)
+            if foldername.startswith("exp_50hz") or foldername.startswith("exp"):
+                csv_path = os.path.join(root, "all_topics.csv")
+                folders.append((foldername, root, csv_path))
+    return folders 
 
 def infer_sampling_rate(foldername):
     """
@@ -49,7 +58,7 @@ def main():
         if sampling_rate is None:
             print(f"[Warning] 未识别采样率，跳过: {foldername}")
             continue
-        stride = int(np.round(sampling_rate / 5)) # 4Hz或5Hz
+        stride = int(np.round(sampling_rate / 10)) # 4Hz或5Hz或10Hz
         print(f"处理 {csv_path}，原采样率: {sampling_rate} Hz，降采样步长: {stride}")
 
         try:
